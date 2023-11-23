@@ -27,6 +27,8 @@ public class BottomPanel {
   private let container = UIView()
   private weak var content: UIViewController?
   private var panelHeight: NSLayoutConstraint!
+  private weak var parentViewController: UIViewController?
+  private weak var contentViewController: UIViewController?
 
   private let animationDuration: CGFloat = 0.3
   private let cornerRadius: CGFloat = 20
@@ -69,6 +71,40 @@ public class BottomPanel {
 
     if let scrollStateObservable = content as? ScrollStateObservable {
       observeScrollView(scrollStateObservable.observedScrollView)
+    }
+  }
+
+  public func replace(
+    content newContent: UIViewController,
+    collapshedHeight: CGFloat = 400,
+    isExpandable: Bool = true
+  ) {
+    self.collapsedHeight = collapshedHeight
+    self.isExpandable = isExpandable
+
+    guard let contentViewController else { return }
+    parentViewController?.replace(
+      child: contentViewController,
+      to: newContent,
+      in: container
+    )
+    self.contentViewController = newContent
+    if let scrollStateObservable = newContent as? ScrollStateObservable {
+      observeScrollView(scrollStateObservable.observedScrollView)
+    }
+    heightInterpolation = createHeightInterpolation()
+    currentPanelPosition = .collapsed
+    if collapshedHeight != panelHeight.constant {
+      let transition = Interpolate(
+        values: [panelHeight.constant, collapshedHeight],
+        function: BasicInterpolation.easeInOut,
+        apply: { [weak self] (constant: CGFloat) in
+          self?.panelHeight.constant = constant
+          self?.adjustCornerRadius()
+          self?.panel.updateConstraints()
+        }
+      )
+      transition.animate(1, duration: animationDuration)
     }
   }
 
@@ -170,20 +206,26 @@ public class BottomPanel {
     }
   )
 
-  private lazy var heightInterpolation = Interpolate(
-    values: [collapsedHeight, expandedHeight],
-    function: BasicInterpolation.linear,
-    apply: { [weak self] (constant: CGFloat) in
-      self?.panelHeight.constant = constant
-      self?.adjustCornerRadius()
-      if constant == 0 {
-        self?.currentPanelPosition = .collapsed
-      } else if constant == 1 {
-        self?.currentPanelPosition = .expanded
+  private lazy var heightInterpolation: Interpolate = {
+    createHeightInterpolation()
+  }()
+
+  private func createHeightInterpolation() -> Interpolate {
+    Interpolate(
+      values: [collapsedHeight, expandedHeight],
+      function: BasicInterpolation.easeInOut,
+      apply: { [weak self] (constant: CGFloat) in
+        self?.panelHeight.constant = constant
+        self?.adjustCornerRadius()
+        if self?.heightInterpolation.progress == 0 {
+          self?.currentPanelPosition = .collapsed
+        } else if self?.heightInterpolation.progress == 1 {
+          self?.currentPanelPosition = .expanded
+        }
+        self?.panel.updateConstraints()
       }
-      self?.panel.updateConstraints()
-    }
-  )
+    )
+  }
 }
 
 // MARK: ScrollerDelegate
@@ -259,14 +301,14 @@ extension BottomPanel {
   }
 
   private func add(_ content: UIViewController, to surface: Surface) {
-    let parent: UIViewController?
     switch surface {
     case .window:
-      parent = window?.rootViewController
+      parentViewController = window?.rootViewController
     case .viewController(let viewController):
-      parent = viewController
+      parentViewController = viewController
     }
-    parent?.add(content, to: container)
+    contentViewController = content
+    parentViewController?.add(content, to: container)
   }
 }
 

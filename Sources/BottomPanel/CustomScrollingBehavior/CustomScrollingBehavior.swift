@@ -27,7 +27,6 @@ class CustomScrollingBehavior: NSObject {
       if let delegate = delegate {
         delegates.append(delegate)
       }
-      print("DelegateProxy created with \(delegates.count) delegates")
       proxy = ScrollViewDelegateProxy(delegates: delegates)
     }
   }

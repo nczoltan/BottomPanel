@@ -50,6 +50,7 @@ extension UIViewController {
       child.removeFromParent()
       new.didMove(toParent: self)
     }
+    new.view.bindFrameToSuperviewBounds()
 
     if animated {
       UIView.animate(

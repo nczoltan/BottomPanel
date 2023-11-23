@@ -12,7 +12,7 @@ import QuartzCore
 /**
  *  Interpolatable protocol. Requires implementation of a vectorize function.
  */
-public protocol Interpolatable {
+protocol Interpolatable {
   /**
    Vectorizes the type and returns and IPValue
    */
@@ -23,7 +23,7 @@ public protocol Interpolatable {
  Supported interpolatable types.
  */
 
-public enum InterpolatableType {
+enum InterpolatableType {
   /// CATransform3D type.
   case caTransform3D
   /// CGAffineTransform type.
@@ -61,7 +61,7 @@ extension CATransform3D: Interpolatable {
    
    - returns: IPValue
    */
-  public func vectorize() -> IPValue {
+  func vectorize() -> IPValue {
     return IPValue(type: .caTransform3D, vectors: [m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44])
   }
 }
@@ -73,7 +73,7 @@ extension CGAffineTransform: Interpolatable {
    
    - returns: IPValue
    */
-  public func vectorize() -> IPValue {
+  func vectorize() -> IPValue {
     return IPValue(type: .cgAffineTransform, vectors: [a, b, c, d, tx, ty])
   }
 }
@@ -85,7 +85,7 @@ extension CGFloat: Interpolatable {
    
    - returns: IPValue
    */
-  public func vectorize() -> IPValue {
+  func vectorize() -> IPValue {
     return IPValue(type: .cgFloat, vectors: [self])
   }
 }
@@ -97,7 +97,7 @@ extension CGPoint: Interpolatable {
    
    - returns: IPValue
    */
-  public func vectorize() -> IPValue {
+  func vectorize() -> IPValue {
     return IPValue(type: .cgPoint, vectors: [x, y])
   }
 }
@@ -109,7 +109,7 @@ extension CGRect: Interpolatable {
    
    - returns: IPValue
    */
-  public func vectorize() -> IPValue {
+  func vectorize() -> IPValue {
     return IPValue(type: .cgRect, vectors: [origin.x, origin.y, size.width, size.height])
   }
 }
@@ -121,7 +121,7 @@ extension CGSize: Interpolatable {
    
    - returns: IPValue
    */
-  public func vectorize() -> IPValue {
+  func vectorize() -> IPValue {
     return IPValue(type: .cgSize, vectors: [width, height])
   }
 }
@@ -133,7 +133,7 @@ extension Double: Interpolatable {
    
    - returns: IPValue
    */
-  public func vectorize() -> IPValue {
+  func vectorize() -> IPValue {
     return IPValue(type: .double, vectors: [CGFloat(self)])
   }
 }
@@ -145,7 +145,7 @@ extension Int: Interpolatable {
    
    - returns: IPValue
    */
-  public func vectorize() -> IPValue {
+  func vectorize() -> IPValue {
     return IPValue(type: .int, vectors: [CGFloat(self)])
   }
 }
@@ -157,7 +157,7 @@ extension NSNumber: Interpolatable {
    
    - returns: IPValue
    */
-  public func vectorize() -> IPValue {
+  func vectorize() -> IPValue {
     return IPValue(type: .nsNumber, vectors: [CGFloat(truncating: self)])
   }
 }
@@ -169,7 +169,7 @@ extension UIColor: Interpolatable {
    
    - returns: IPValue
    */
-  public func vectorize() -> IPValue {
+  func vectorize() -> IPValue {
     var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
     
     if getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
@@ -197,13 +197,13 @@ extension UIEdgeInsets: Interpolatable {
    
    - returns: IPValue
    */
-  public func vectorize() -> IPValue {
+  func vectorize() -> IPValue {
     return IPValue(type: .uiEdgeInsets, vectors: [top, left, bottom, right])
   }
 }
 
 /// IPValue class. Contains a vectorized version of an Interpolatable type.
-open class IPValue {
+class IPValue {
   
   let type: InterpolatableType
   var vectors: [CGFloat]

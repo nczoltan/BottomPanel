@@ -22,23 +22,23 @@
 import UIKit
 
 /// Spring interpolation
-open class SpringInterpolation: InterpolationFunction {
+class SpringInterpolation: InterpolationFunction {
   
   /// Damping
-  open var damping: CGFloat = 10.0
+  var damping: CGFloat = 10.0
   /// Mass
-  open var mass: CGFloat = 1.0
+  var mass: CGFloat = 1.0
   /// Stiffness
-  open var stiffness: CGFloat = 100.0
+  var stiffness: CGFloat = 100.0
   /// Velocity
-  open var velocity: CGFloat = 0.0
+  var velocity: CGFloat = 0.0
   
   /**
    Initialise Spring interpolation
    
    - returns: a SpringInterpolation object
    */
-  public init() {}
+  init() {}
   
   /**
    Initialise Spring interpolation with options.
@@ -50,7 +50,7 @@ open class SpringInterpolation: InterpolationFunction {
    
    - returns: a SpringInterpolation object
    */
-  public init(damping: CGFloat, velocity: CGFloat, mass: CGFloat, stiffness: CGFloat) {
+  init(damping: CGFloat, velocity: CGFloat, mass: CGFloat, stiffness: CGFloat) {
     self.damping = damping
     self.velocity = velocity
     self.mass = mass
@@ -64,7 +64,7 @@ open class SpringInterpolation: InterpolationFunction {
    
    - returns: Adjusted progress value with interpolation function.
    */
-  open func apply(_ progress: CGFloat) -> CGFloat {
+  func apply(_ progress: CGFloat) -> CGFloat {
     
     if damping <= 0.0 || stiffness <= 0.0 || mass <= 0.0 {
       fatalError("Incorrect animation values")

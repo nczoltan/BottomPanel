@@ -9,12 +9,12 @@
 import UIKit
 
 /// Interpolate class. Responsible for conducting interpolations.
-open class Interpolate {
+class Interpolate {
   
   //MARK: Properties and variables
   
   /// Progress variable. Takes a value between 0.0 and 1,0. CGFloat. Setting it triggers the apply closure.
-  open var progress: CGFloat = 0.0 {
+  var progress: CGFloat = 0.0 {
     didSet {
       // We make sure progress is between 0.0 and 1.0
       progress = max(0, min(progress, 1.0))
@@ -58,7 +58,7 @@ open class Interpolate {
    
    - returns: an Interpolate object.
    */
-  public init<T: Interpolatable>(values: [T], function: InterpolationFunction = BasicInterpolation.linear, apply: @escaping ((T) -> ())) {
+  init<T: Interpolatable>(values: [T], function: InterpolationFunction = BasicInterpolation.linear, apply: @escaping ((T) -> ())) {
     assert(values.count >= 2, "You should provide at least two values")
     let vectorizedValues = values.map({$0.vectorize()})
     self.values = vectorizedValues
@@ -79,7 +79,7 @@ open class Interpolate {
    
    - returns: an Interpolate object.
    */
-  public convenience init<T: Interpolatable>(from: T, to: T, function: InterpolationFunction = BasicInterpolation.linear, apply: @escaping ((T) -> ())) {
+  convenience init<T: Interpolatable>(from: T, to: T, function: InterpolationFunction = BasicInterpolation.linear, apply: @escaping ((T) -> ())) {
     let values = [from, to]
     self.init(values: values, function: function, apply: apply)
   }
@@ -89,7 +89,7 @@ open class Interpolate {
   /**
    Invalidates the apply function
    */
-  open func invalidate() {
+  func invalidate() {
     apply = nil
   }
   
@@ -102,7 +102,7 @@ open class Interpolate {
    - parameter duration:       Duration in seconds. CGFloat.
    - parameter completion:     Completion handler. Optional.
    */
-  open func animate(_ targetProgress: CGFloat = 1.0, duration: CGFloat, completion:(()->())? = nil) {
+  func animate(_ targetProgress: CGFloat = 1.0, duration: CGFloat, completion:(()->())? = nil) {
     self.targetProgress = targetProgress
     self.duration = duration
     self.animationCompletion = completion
@@ -114,7 +114,7 @@ open class Interpolate {
   /**
    Stops animation.
    */
-  open func stopAnimation() {
+  func stopAnimation() {
     displayLink?.invalidate()
     animationCompletion?()
   }
@@ -172,7 +172,7 @@ open class Interpolate {
 /**
  *  Interpolation function. Must implement an application function.
  */
-public protocol InterpolationFunction {
+protocol InterpolationFunction {
   /**
    Applies interpolation function to a given progress value.
    

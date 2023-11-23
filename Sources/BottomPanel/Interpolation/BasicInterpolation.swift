@@ -11,7 +11,7 @@ import UIKit
 /**
  Basic interpolation function.
  */
-public enum BasicInterpolation: InterpolationFunction {
+enum BasicInterpolation: InterpolationFunction {
   /// Linear interpolation.
   case linear
   /// Ease in interpolation.
@@ -28,7 +28,7 @@ public enum BasicInterpolation: InterpolationFunction {
    
    - returns: Adjusted progress value with interpolation function. 
    */
-  public func apply(_ progress: CGFloat) -> CGFloat {
+  func apply(_ progress: CGFloat) -> CGFloat {
     switch self {
     case .linear:
       return progress

@@ -19,7 +19,14 @@ protocol ScrollerDelegate: AnyObject {
 class CustomScrollingBehavior: NSObject {
 
   weak var scrollerDelegate: ScrollerDelegate?
-  var isDamping = false
+  var isDamping = false {
+    didSet {
+      if isDamping != oldValue {
+        isDragging = false
+      }
+    }
+  }
+  private var isCustomBehaviorActivated = false
   private var isDragging = false
   private var scrollViewOffset = CGPoint.zero
 
@@ -51,12 +58,15 @@ extension CustomScrollingBehavior: UICollectionViewDelegate {}
 extension CustomScrollingBehavior: UICollectionViewDelegateFlowLayout {}
 extension CustomScrollingBehavior: UIScrollViewDelegate {
   func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-    isDragging = true
-    scrollerDelegate?.willBeginDragging()
+    if scrollView.contentOffset.y <= 0 || isDamping {
+      isDragging = true
+      scrollerDelegate?.willBeginDragging()
+    }
   }
 
   func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
     isDragging = false
+    isCustomBehaviorActivated = false
     scrollerDelegate?.didEndDragging()
   }
 
@@ -65,7 +75,7 @@ extension CustomScrollingBehavior: UIScrollViewDelegate {
   }
 
   func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
-    if scrollView.contentOffset.y == 0 {
+    if isCustomBehaviorActivated {
       scrollerDelegate?.scrollerWillEndDragging(velocity: velocity)
     }
 
@@ -77,6 +87,7 @@ extension CustomScrollingBehavior: UIScrollViewDelegate {
     guard movement != 0 else { return }
     let notOverScroll = (movement > 0 && scrollView.contentOffset.y > 0) || (movement < 0 && scrollView.contentOffset.y < 0)
     if (isDragging) && (notOverScroll) && (scrollerDelegate?.scrollerDidScroll(movement: movement)) == false {
+      isCustomBehaviorActivated = true
       scrollView.contentOffset = scrollViewOffset
     } else {
       scrollViewOffset = scrollView.contentOffset

@@ -30,13 +30,23 @@ public class BottomPanel {
   private weak var parentViewController: UIViewController?
   private weak var contentViewController: UIViewController?
 
-  private let animationDuration: CGFloat = 0.3
+  private let animationDuration: CGFloat = 0.35
   private let cornerRadius: CGFloat = 20
   private let handleSpaceHeight: CGFloat = 40
+  private let expandingVelocity: CGFloat = 1
   private var collapsedHeight: CGFloat = 400
   private var expandedHeight: CGFloat = CGFloat(UIScreen.main.bounds.height)
   private var isExpandable = true
-  private (set) public var currentPanelPosition: PanelPosition = .collapsed
+  private (set) public var currentPanelPosition: PanelPosition = .collapsed {
+    didSet {
+      switch currentPanelPosition {
+      case .collapsed:
+        scrollObservation?.isDamping = true
+      case .expanded:
+        scrollObservation?.isDamping = false
+      }
+    }
+  }
 
   private var scrollObservation: CustomScrollingBehavior?
 
@@ -112,6 +122,7 @@ public class BottomPanel {
     scrollObservation = CustomScrollingBehavior()
     scrollObservation?.scrollerDelegate = self
     scrollObservation?.scrollView = scrollView
+    scrollObservation?.isDamping = isExpandable
   }
 
   public func show(
@@ -156,7 +167,8 @@ public class BottomPanel {
       recognizer.setTranslation(.zero, in: recognizer.view)
       _ = adjustPanelPosition(by: movement)
     case .ended, .cancelled, .failed:
-      snapToPredefinedPosition()
+      let velocity = recognizer.velocity(in: recognizer.view)
+      scrollerWillEndDragging(velocity: CGPoint(x: 0, y: (-velocity.y / 1000)))
     default:
       break
     }
@@ -228,12 +240,28 @@ public class BottomPanel {
   }
 }
 
+
 // MARK: ScrollerDelegate
 extension BottomPanel: ScrollerDelegate {
   func willBeginDragging() {}
 
-  func didEndDragging() {
-    snapToPredefinedPosition()
+  func didEndDragging() {}
+
+  func scrollerWillEndDragging(velocity: CGPoint) {
+    let absVelocity = abs(velocity.y)
+    let flingUp = currentPanelPosition == .collapsed && velocity.y > 0
+    let flingDown = currentPanelPosition == .expanded && velocity.y < 0
+    guard absVelocity > 0.8, (flingUp || flingDown) else {
+      snapToPredefinedPosition()
+      return
+    }
+    heightInterpolation.stopAnimation()
+    switch currentPanelPosition {
+    case .collapsed:
+      heightInterpolation.animate(1, duration: animationDuration)
+    case .expanded:
+      heightInterpolation.animate(0, duration: animationDuration)
+    }
   }
 
   func scrollerDidScroll(movement: CGFloat) -> Bool {

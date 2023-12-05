@@ -9,7 +9,7 @@ import Foundation
 import UIKit
 
 extension UIViewController {
-  func add(_ child: UIViewController, to container: UIView) {
+  public func add(_ child: UIViewController, to container: UIView) {
     child.view.translatesAutoresizingMaskIntoConstraints = false
     child.view.frame = container.bounds
     addChild(child)
@@ -18,7 +18,7 @@ extension UIViewController {
     child.didMove(toParent: self)
   }
 
-  func remove() {
+  public func remove() {
     guard parent != nil else {
       return
     }
@@ -35,7 +35,7 @@ extension UIViewController {
     animated: Bool = true,
     completion: (() -> Void)? = nil
   ) {
-    child.willMove(toParent: nil)
+    child.willMove(toParent: self)
     new.view.translatesAutoresizingMaskIntoConstraints = true
     new.view.frame = container.bounds
 

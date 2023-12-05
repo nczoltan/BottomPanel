@@ -32,10 +32,10 @@ public class BottomPanel {
   private weak var parentViewController: UIViewController?
   private weak var contentViewController: UIViewController?
 
-  private let animationDuration: CGFloat = 0.35
+  private let animationDuration: CGFloat = 0.25
   private let cornerRadius: CGFloat = 20
   private let handleMaxOpacity: CGFloat = 0.5
-  private let handleSpaceHeight: CGFloat = 40
+  private let handleSpaceHeight: CGFloat = 20
   private let expandingVelocity: CGFloat = 1
   private var collapsedHeight: CGFloat = 400
   private var expandedHeight: CGFloat = CGFloat(UIScreen.main.bounds.height)
@@ -64,6 +64,13 @@ public class BottomPanel {
     set {
       backgroundView.backgroundColor = newValue
     }
+  }
+
+  deinit {
+    contentViewController?.remove()
+    panel.removeFromSuperview()
+    window?.resignKey()
+    window = nil
   }
 
   public init(
@@ -95,10 +102,10 @@ public class BottomPanel {
 
   public func replace(
     content newContent: UIViewController,
-    collapshedHeight: CGFloat = 400,
+    collapsedHeight: CGFloat = 400,
     isExpandable: Bool = true
   ) {
-    self.collapsedHeight = collapshedHeight
+    self.collapsedHeight = collapsedHeight
     self.isExpandable = isExpandable
 
     guard let contentViewController else { return }
@@ -113,9 +120,9 @@ public class BottomPanel {
     }
     heightInterpolation = createHeightInterpolation()
     currentPanelPosition = .collapsed
-    if collapshedHeight != panelHeight.constant {
+    if collapsedHeight != panelHeight.constant {
       let transition = Interpolate(
-        values: [panelHeight.constant, collapshedHeight],
+        values: [panelHeight.constant, collapsedHeight],
         function: BasicInterpolation.easeInOut,
         apply: { [weak self] (constant: CGFloat) in
           self?.panelHeight.constant = constant

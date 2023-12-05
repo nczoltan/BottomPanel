@@ -9,13 +9,13 @@ import Foundation
 import UIKit
 
 extension UIView {
-  func roundCorners(corners: CACornerMask, radius: CGFloat) {
+  func roundCorners(corners: CACornerMask = [.layerMaxXMinYCorner, .layerMinXMinYCorner], radius: CGFloat) {
     clipsToBounds = true
     layer.cornerRadius = radius
-    layer.maskedCorners = [.layerMaxXMinYCorner, .layerMinXMinYCorner]
+    layer.maskedCorners = corners
   }
   
-  func bindFrameToSuperviewBounds() {
+  public func bindFrameToSuperviewBounds() {
     guard let superview = self.superview else {
       return
     }

@@ -28,7 +28,7 @@ public class BottomPanel {
   private let backgroundView = UIView()
   private let container = UIView()
   private weak var content: UIViewController?
-  private var panelHeight: NSLayoutConstraint!
+  private var containerHeight: NSLayoutConstraint!
   private weak var parentViewController: UIViewController?
   private weak var contentViewController: UIViewController?
 
@@ -79,15 +79,16 @@ public class BottomPanel {
     collapsedHeight: CGFloat = 400,
     isExpandable: Bool = true
   ) {
-    self.collapsedHeight = collapsedHeight
+    self.collapsedHeight = collapsedHeight - handleSpaceHeight
     self.isExpandable = isExpandable
-    initPanel(on: surface)
+    let parentView = getParentView(on: surface)
+    initPanel(on: parentView)
     initBackground()
-    initContainer()
+    initContainer(on: parentView)
     initHandle()
     initActionContainer()
 
-    panel.transform = CGAffineTransform(translationX: 0, y: panelHeight.constant)
+    panel.transform = CGAffineTransform(translationX: 0, y: containerHeight.constant)
 
     // in case the surface is a winddow
     window?.layoutIfNeeded()
@@ -105,7 +106,7 @@ public class BottomPanel {
     collapsedHeight: CGFloat = 400,
     isExpandable: Bool = true
   ) {
-    self.collapsedHeight = collapsedHeight
+    self.collapsedHeight = collapsedHeight - handleSpaceHeight
     self.isExpandable = isExpandable
 
     guard let contentViewController else { return }
@@ -120,12 +121,12 @@ public class BottomPanel {
     }
     heightInterpolation = createHeightInterpolation()
     currentPanelPosition = .collapsed
-    if collapsedHeight != panelHeight.constant {
+    if collapsedHeight != containerHeight.constant {
       let transition = Interpolate(
-        values: [panelHeight.constant, collapsedHeight],
+        values: [containerHeight.constant, collapsedHeight],
         function: BasicInterpolation.easeInOut,
         apply: { [weak self] (constant: CGFloat) in
-          self?.panelHeight.constant = constant
+          self?.containerHeight.constant = constant
           self?.adjustCornerRadius()
           self?.panel.updateConstraints()
         }
@@ -179,7 +180,7 @@ public class BottomPanel {
       delay: 0,
       options: .curveEaseInOut,
       animations: {
-        self.panel.transform = CGAffineTransform(translationX: 0, y: self.panelHeight.constant)
+        self.panel.transform = CGAffineTransform(translationX: 0, y: self.containerHeight.constant)
       },
       completion: { _ in
         completion?()
@@ -280,7 +281,7 @@ public class BottomPanel {
       values: [collapsedHeight, expandedHeight],
       function: BasicInterpolation.easeInOut,
       apply: { [weak self] (constant: CGFloat) in
-        self?.panelHeight.constant = constant
+        self?.containerHeight.constant = constant
         self?.adjustCornerRadius()
         self?.adjustActionOpacity()
         self?.adjusthandleOpacity()
@@ -326,7 +327,8 @@ extension BottomPanel: ScrollerDelegate {
 
 // MARK: Layout
 extension BottomPanel {
-  private func initPanel(on surface: Surface) {
+
+  private func getParentView(on surface: Surface) -> UIView {
     let parent: UIView
     switch surface {
     case .window:
@@ -335,6 +337,10 @@ extension BottomPanel {
     case .viewController(let vc):
       parent = vc.view
     }
+    return parent
+  }
+
+  private func initPanel(on parent: UIView) {
     panel.translatesAutoresizingMaskIntoConstraints = false
     parent.addSubview(panel)
 
@@ -343,12 +349,10 @@ extension BottomPanel {
     panel.layer.shadowOpacity = 0.2
     panel.layer.shadowOffset = CGSize(width: 0, height: -2)
 
-    panelHeight = panel.heightAnchor.constraint(equalToConstant: collapsedHeight)
     NSLayoutConstraint.activate([
       panel.bottomAnchor.constraint(equalTo: parent.bottomAnchor),
       panel.trailingAnchor.constraint(equalTo: parent.trailingAnchor),
       panel.leadingAnchor.constraint(equalTo: parent.leadingAnchor),
-      panelHeight
     ])
 
     let pan = UIPanGestureRecognizer(target: self, action: #selector(onPanelPan(recognizer:)))
@@ -363,14 +367,16 @@ extension BottomPanel {
     backgroundView.bindFrameToSuperviewBounds()
   }
 
-  private func initContainer() {
+  private func initContainer(on parent: UIView) {
     container.translatesAutoresizingMaskIntoConstraints = false
     backgroundView.addSubview(container)
+    containerHeight = container.heightAnchor.constraint(equalToConstant: collapsedHeight)
     NSLayoutConstraint.activate([
-      container.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor),
+      container.bottomAnchor.constraint(equalTo: parent.safeAreaLayoutGuide.bottomAnchor),
       container.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor),
       container.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor),
-      container.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: handleSpaceHeight)
+      container.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: handleSpaceHeight),
+      containerHeight,
     ])
   }
 

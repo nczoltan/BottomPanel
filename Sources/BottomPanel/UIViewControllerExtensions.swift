@@ -35,7 +35,7 @@ extension UIViewController {
     animated: Bool = true,
     completion: (() -> Void)? = nil
   ) {
-    child.willMove(toParent: self)
+    child.willMove(toParent: nil)
     new.view.translatesAutoresizingMaskIntoConstraints = true
     new.view.frame = container.bounds
 
@@ -44,17 +44,9 @@ extension UIViewController {
     if animated {
       new.view.alpha = 0
       container.insertSubview(new.view, belowSubview: child.view)
-    } else {
-      container.addSubview(new.view)
-      child.view.removeFromSuperview()
-      child.removeFromParent()
-      new.didMove(toParent: self)
-    }
-    new.view.bindFrameToSuperviewBounds()
 
-    if animated {
       UIView.animate(
-        withDuration: 0.3,
+        withDuration: 0.25,
         animations: {
           new.view.alpha = 1
           child.view.alpha = 0
@@ -66,6 +58,11 @@ extension UIViewController {
           completion?()
         }
       )
+    } else {
+      container.addSubview(new.view)
+      child.view.removeFromSuperview()
+      child.removeFromParent()
+      new.didMove(toParent: self)
     }
   }
 }

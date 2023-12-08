@@ -27,7 +27,6 @@ public class BottomPanel {
   private let handle = UIView()
   private let backgroundView = UIView()
   private let container = UIView()
-  private weak var content: UIViewController?
   private var containerHeight: NSLayoutConstraint!
   private weak var parentViewController: UIViewController?
   private weak var contentViewController: UIViewController?
@@ -41,7 +40,7 @@ public class BottomPanel {
   private var expandedHeight: CGFloat = CGFloat(UIScreen.main.bounds.height)
   private var isExpandable = true {
     didSet {
-      handle.isHidden = !isExpandable
+      handle.alpha = isExpandable ? 1 : 0
     }
   }
   private (set) public var currentPanelPosition: PanelPosition = .collapsed {
@@ -63,6 +62,7 @@ public class BottomPanel {
     }
     set {
       backgroundView.backgroundColor = newValue
+      container.backgroundColor = newValue
     }
   }
 
@@ -108,6 +108,7 @@ public class BottomPanel {
   ) {
     self.collapsedHeight = collapsedHeight - handleSpaceHeight
     self.isExpandable = isExpandable
+    newContent.view.backgroundColor = backgroundColor
 
     guard let contentViewController else { return }
     parentViewController?.replace(
@@ -121,7 +122,8 @@ public class BottomPanel {
     }
     heightInterpolation = createHeightInterpolation()
     currentPanelPosition = .collapsed
-    if collapsedHeight != containerHeight.constant {
+    if self.collapsedHeight != containerHeight.constant {
+      print("CollapsedHeight: \(collapsedHeight) - Container: \(containerHeight.constant)")
       let transition = Interpolate(
         values: [containerHeight.constant, collapsedHeight],
         function: BasicInterpolation.easeInOut,
@@ -403,7 +405,7 @@ extension BottomPanel {
   private func initHandle() {
     handle.translatesAutoresizingMaskIntoConstraints = false
     handle.backgroundColor = .lightGray
-    handle.alpha = handleMaxOpacity
+    handle.alpha = isExpandable ? handleMaxOpacity : 0
     handle.clipsToBounds = true
     handle.layer.cornerRadius = 3
     panel.addSubview(handle)

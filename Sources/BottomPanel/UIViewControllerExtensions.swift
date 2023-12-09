@@ -44,6 +44,7 @@ extension UIViewController {
     if animated {
       new.view.alpha = 0
       container.insertSubview(new.view, belowSubview: child.view)
+      new.view.bindFrameToSuperviewBounds()
 
       UIView.animate(
         withDuration: 0.25,

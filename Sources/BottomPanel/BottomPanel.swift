@@ -123,7 +123,6 @@ public class BottomPanel {
     heightInterpolation = createHeightInterpolation()
     currentPanelPosition = .collapsed
     if self.collapsedHeight != containerHeight.constant {
-      print("CollapsedHeight: \(collapsedHeight) - Container: \(containerHeight.constant)")
       let transition = Interpolate(
         values: [containerHeight.constant, collapsedHeight],
         function: BasicInterpolation.easeInOut,

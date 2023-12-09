@@ -372,7 +372,9 @@ extension BottomPanel {
     container.translatesAutoresizingMaskIntoConstraints = false
     backgroundView.addSubview(container)
     containerHeight = container.heightAnchor.constraint(equalToConstant: collapsedHeight)
+    containerHeight.priority = .defaultHigh
     NSLayoutConstraint.activate([
+      panel.topAnchor.constraint(greaterThanOrEqualTo: parent.topAnchor),
       container.bottomAnchor.constraint(equalTo: parent.safeAreaLayoutGuide.bottomAnchor),
       container.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor),
       container.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor),

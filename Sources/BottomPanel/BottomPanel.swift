@@ -8,51 +8,46 @@
 import Foundation
 import UIKit
 
-public protocol ScrollStateObservable {
-  var observedScrollView: UIScrollView { get }
-}
-
 public class BottomPanel {
-  public enum PanelPosition {
-    case collapsed, expanded
-  }
+  var window: UIWindow?
+  let panel = UIView()
+  let actionContainer = UIStackView()
+  let handle = UIView()
+  let backgroundView = UIView()
+  let container = UIView()
+  let dimmingView = UIView()
+  var containerHeight: NSLayoutConstraint!
+  weak var parentViewController: UIViewController?
+  weak var contentViewController: UIViewController?
 
-  public enum Surface {
-    case window, viewController(UIViewController)
-  }
+  let animationDuration: CGFloat = 0.25
+  let cornerRadius: CGFloat = 20
+  let handleMaxOpacity: CGFloat = 0.5
+  let handleSpaceHeight: CGFloat = 20
+  let expandingVelocity: CGFloat = 1
 
-  private var window: UIWindow?
-  private let panel = UIView()
-  private let actionContainer = UIStackView()
-  private let handle = UIView()
-  private let backgroundView = UIView()
-  private let container = UIView()
-  private var containerHeight: NSLayoutConstraint!
-  private weak var parentViewController: UIViewController?
-  private weak var contentViewController: UIViewController?
+  var collapsedHeight: CGFloat { config.collapsedHeight - handleSpaceHeight }
+  var expandedHeight: CGFloat = CGFloat(UIScreen.main.bounds.height)
+  var isClosing: Bool { closeInterpolation.progress != 0 }
 
-  private let animationDuration: CGFloat = 0.25
-  private let cornerRadius: CGFloat = 20
-  private let handleMaxOpacity: CGFloat = 0.5
-  private let handleSpaceHeight: CGFloat = 20
-  private let expandingVelocity: CGFloat = 1
-  private var collapsedHeight: CGFloat = 400
-  private var expandedHeight: CGFloat = CGFloat(UIScreen.main.bounds.height)
-  private var isExpandable = true {
+  var config: BottomPanel.Config = Config() {
     didSet {
-      handle.alpha = isExpandable ? 1 : 0
+      handle.alpha = config.isExpandable || config.closingByGesture ? 1 : 0
     }
   }
-  private (set) public var currentPanelPosition: PanelPosition = .collapsed {
+  internal (set) public var currentPanelPosition: PanelPosition = .collapsed {
     didSet {
       switch currentPanelPosition {
       case .collapsed:
-        scrollObservation?.isDamping = isExpandable
+        dimmingView.alpha = config.backgroundDimmingOnCollapsedState ? 1 : 0
+        scrollObservation?.isDamping = config.isExpandable
       case .expanded:
+        dimmingView.alpha = 1
         scrollObservation?.isDamping = false
       }
     }
   }
+  public var onClosedWithGesture: (() -> Void)?
 
   private var scrollObservation: CustomScrollingBehavior?
 
@@ -68,6 +63,7 @@ public class BottomPanel {
 
   deinit {
     contentViewController?.remove()
+    dimmingView.removeFromSuperview()
     panel.removeFromSuperview()
     window?.resignKey()
     window = nil
@@ -76,19 +72,16 @@ public class BottomPanel {
   public init(
     on surface: Surface,
     showing content: UIViewController,
-    collapsedHeight: CGFloat = 400,
-    isExpandable: Bool = true
+    config: Config = Config()
   ) {
-    self.collapsedHeight = collapsedHeight - handleSpaceHeight
-    self.isExpandable = isExpandable
+    self.config = config
     let parentView = getParentView(on: surface)
+    initDimmingView(on: parentView)
     initPanel(on: parentView)
     initBackground()
     initContainer(on: parentView)
     initHandle()
     initActionContainer()
-
-    panel.transform = CGAffineTransform(translationX: 0, y: containerHeight.constant)
 
     // in case the surface is a winddow
     window?.layoutIfNeeded()
@@ -103,11 +96,9 @@ public class BottomPanel {
 
   public func replace(
     content newContent: UIViewController,
-    collapsedHeight: CGFloat = 400,
-    isExpandable: Bool = true
+    config: Config = Config()
   ) {
-    self.collapsedHeight = collapsedHeight - handleSpaceHeight
-    self.isExpandable = isExpandable
+    self.config = config
     newContent.view.backgroundColor = backgroundColor
 
     guard let contentViewController else { return }
@@ -122,13 +113,14 @@ public class BottomPanel {
     }
     heightInterpolation = createHeightInterpolation()
     currentPanelPosition = .collapsed
-    if self.collapsedHeight != containerHeight.constant {
+    if collapsedHeight != containerHeight.constant {
       let transition = Interpolate(
         values: [containerHeight.constant, collapsedHeight],
         function: BasicInterpolation.easeInOut,
         apply: { [weak self] (constant: CGFloat) in
           self?.containerHeight.constant = constant
           self?.adjustCornerRadius()
+          self?.adjustDimmingViewAlpha()
           self?.panel.updateConstraints()
         }
       )
@@ -152,80 +144,31 @@ public class BottomPanel {
     scrollObservation = CustomScrollingBehavior()
     scrollObservation?.scrollerDelegate = self
     scrollObservation?.scrollView = scrollView
-    scrollObservation?.isDamping = isExpandable
+    scrollObservation?.isDamping = config.isExpandable || config.closingByGesture
   }
 
   public func show(
     animated: Bool = true,
     completion: (() -> Void)? = nil
   ) {
-    UIView.animate(
-      withDuration: animated ? animationDuration : 0,
-      delay: 0,
-      options: .curveEaseInOut,
-      animations: {
-        self.panel.transform = .identity
-      },
-      completion: { _ in
-        completion?()
-      }
-    )
+    panel.setNeedsLayout()
+    panel.layoutIfNeeded()
+    closeInterpolation.progress = 1
+    closeInterpolation.animate(0, duration: animated ? animationDuration : 0) {
+      completion?()
+    }
   }
 
   public func hide(
     animated: Bool = true,
     completion: (() -> Void)? = nil
   ) {
-    UIView.animate(
-      withDuration: animated ? animationDuration : 0,
-      delay: 0,
-      options: .curveEaseInOut,
-      animations: {
-        self.panel.transform = CGAffineTransform(translationX: 0, y: self.containerHeight.constant)
-      },
-      completion: { _ in
-        completion?()
-      }
-    )
-  }
-
-  // MARK: Pan gesture on panel
-  @objc private func onPanelPan(recognizer: UIPanGestureRecognizer) {
-    guard isExpandable else { return }
-    switch recognizer.state {
-    case .changed:
-      let movement = -recognizer.translation(in: recognizer.view).y
-      recognizer.setTranslation(.zero, in: recognizer.view)
-      _ = adjustPanelPosition(by: movement)
-    case .ended, .cancelled, .failed:
-      let velocity = recognizer.velocity(in: recognizer.view)
-      scrollerWillEndDragging(velocity: CGPoint(x: 0, y: (-velocity.y / 1000)))
-    default:
-      break
+    closeInterpolation.animate(1, duration: animated ? animationDuration : 0) {
+      completion?()
     }
   }
 
-  private func adjustPanelPosition(by movement: CGFloat) -> Bool {
-    guard isExpandable else { return true }
-    if heightInterpolation.progress == 1 && movement > 0 {
-      return true
-    }
-    if heightInterpolation.progress == 0 && movement < 0 {
-      return true
-    }
-    let step = abs(1 / (expandedHeight - collapsedHeight))
-    let progress = heightInterpolation.progress + (movement * step)
-    let normalizedProgress = min(max(progress, 0), 1)
-
-    heightInterpolation.progress = normalizedProgress
-
-    if normalizedProgress == 0 {
-      currentPanelPosition = .collapsed
-    } else if normalizedProgress == 1 {
-      currentPanelPosition = .expanded
-    }
-    return false
-  }
+  // MARK: Adjusting interpolator's progress
 
   private func adjustCornerRadius() {
     let currentHeightProgress = heightInterpolation.progress
@@ -236,17 +179,26 @@ public class BottomPanel {
     }
   }
 
+  private func adjustDimmingViewAlpha() {
+    if isClosing && config.backgroundDimmingOnCollapsedState {
+      let currentCloseProgress = closeInterpolation.progress
+      dimmingView.alpha = config.backgroundDimmingOnCollapsedState ? (1 - (1 * currentCloseProgress)) : 0
+    } else {
+      let currentHeightProgress = heightInterpolation.progress
+      dimmingView.alpha = config.backgroundDimmingOnCollapsedState ? 1 : (1 * currentHeightProgress)
+    }
+  }
+
   private func adjustActionOpacity() {
-    actionOpacityInterpolation.progress = heightInterpolation.progress
+    if isClosing {
+      actionOpacityInterpolation.progress = closeInterpolation.progress
+    } else {
+      actionOpacityInterpolation.progress = heightInterpolation.progress
+    }
   }
 
   private func adjusthandleOpacity() {
     handleOpacityInterpolation.progress = heightInterpolation.progress
-  }
-
-  private func snapToPredefinedPosition() {
-    let isOverHalf = heightInterpolation.progress > 0.5
-    heightInterpolation.animate(isOverHalf ? 1 : 0, duration: animationDuration)
   }
 
   // MARK: Interpolations
@@ -273,6 +225,22 @@ public class BottomPanel {
     }
   )
 
+  private lazy var closeInterpolation: Interpolate = {
+    createCloseInterpolation()
+  }()
+
+  private func createCloseInterpolation() -> Interpolate {
+    Interpolate(
+      values: [0, panel.bounds.height],
+      function: BasicInterpolation.easeInOut,
+      apply: { [weak self] (translation: CGFloat) in
+        self?.adjustActionOpacity()
+        self?.adjustDimmingViewAlpha()
+        self?.panel.transform = CGAffineTransform(translationX: 0, y: translation)
+      }
+    )
+  }
+
   private lazy var heightInterpolation: Interpolate = {
     createHeightInterpolation()
   }()
@@ -284,6 +252,7 @@ public class BottomPanel {
       apply: { [weak self] (constant: CGFloat) in
         self?.containerHeight.constant = constant
         self?.adjustCornerRadius()
+        self?.adjustDimmingViewAlpha()
         self?.adjustActionOpacity()
         self?.adjusthandleOpacity()
         if self?.heightInterpolation.progress == 0 {
@@ -305,11 +274,77 @@ extension BottomPanel: ScrollerDelegate {
   func didEndDragging() {}
 
   func scrollerWillEndDragging(velocity: CGPoint) {
+    if isClosing {
+      closingWillEndDragging(velocity: velocity)
+    } else {
+      draggingPanelWillEnd(velocity: velocity)
+    }
+  }
+
+  func scrollerDidScroll(movement: CGFloat) -> Bool {
+    adjustPanelPosition(by: movement)
+  }
+}
+
+// MARK: Pan gesture on panel
+extension BottomPanel {
+  @objc func onPanelPan(recognizer: UIPanGestureRecognizer) {
+    guard config.isExpandable || config.closingByGesture else { return }
+    switch recognizer.state {
+    case .changed:
+      let movement = -recognizer.translation(in: recognizer.view).y
+      recognizer.setTranslation(.zero, in: recognizer.view)
+      _ = adjustPanelPosition(by: movement)
+    case .ended, .cancelled, .failed:
+      let velocity = recognizer.velocity(in: recognizer.view)
+      let velocityPoint = CGPoint(x: 0, y: (-velocity.y / 1000))
+      if isClosing {
+        closingWillEndDragging(velocity: velocityPoint)
+      } else {
+        draggingPanelWillEnd(velocity: velocityPoint)
+      }
+    default:
+      break
+    }
+  }
+
+  func adjustPanelPosition(by movement: CGFloat) -> Bool {
+    if heightInterpolation.progress == 1 && movement > 0 {
+      return true
+    }
+    if heightInterpolation.progress == 0 && movement < 0 {
+      if config.closingByGesture {
+        controlCloseInterpolation(by: movement)
+        return false
+      }
+      return true
+    }
+    if config.isExpandable {
+      controlHeightInterpolation(by: movement)
+      return false
+    }
+    return true
+  }
+
+  func closingWillEndDragging(velocity: CGPoint) {
+    let absVelocity = abs(velocity.y)
+    closeInterpolation.stopAnimation()
+    if absVelocity < 0.8, closeInterpolation.progress < 0.5 {
+      closeInterpolation.animate(0, duration: animationDuration)
+    } else {
+      closeInterpolation.animate(1, duration: animationDuration) { [weak self] in
+        self?.onClosedWithGesture?()
+      }
+    }
+  }
+
+  func draggingPanelWillEnd(velocity: CGPoint) {
     let absVelocity = abs(velocity.y)
     let flingUp = currentPanelPosition == .collapsed && velocity.y > 0
     let flingDown = currentPanelPosition == .expanded && velocity.y < 0
     guard absVelocity > 0.8, (flingUp || flingDown) else {
-      snapToPredefinedPosition()
+      let isOverHalf = heightInterpolation.progress > 0.5
+      heightInterpolation.animate(isOverHalf ? 1 : 0, duration: animationDuration)
       return
     }
     heightInterpolation.stopAnimation()
@@ -321,112 +356,24 @@ extension BottomPanel: ScrollerDelegate {
     }
   }
 
-  func scrollerDidScroll(movement: CGFloat) -> Bool {
-    adjustPanelPosition(by: movement)
+  func controlCloseInterpolation(by movement: CGFloat) {
+    let step = abs(1 / panel.bounds.height)
+    let progress = closeInterpolation.progress + (-movement * step)
+    let normalizedProgress = min(max(progress, 0), 1)
+    closeInterpolation.progress = normalizedProgress
+  }
+
+  func controlHeightInterpolation(by movement: CGFloat) {
+    let step = abs(1 / (expandedHeight - collapsedHeight))
+    let progress = heightInterpolation.progress + (movement * step)
+    let normalizedProgress = min(max(progress, 0), 1)
+
+    heightInterpolation.progress = normalizedProgress
+
+    if normalizedProgress == 0 {
+      currentPanelPosition = .collapsed
+    } else if normalizedProgress == 1 {
+      currentPanelPosition = .expanded
+    }
   }
 }
-
-// MARK: Layout
-extension BottomPanel {
-
-  private func getParentView(on surface: Surface) -> UIView {
-    let parent: UIView
-    switch surface {
-    case .window:
-      window = initWindow()
-      parent = window!.rootViewController!.view
-    case .viewController(let vc):
-      parent = vc.view
-    }
-    return parent
-  }
-
-  private func initPanel(on parent: UIView) {
-    panel.translatesAutoresizingMaskIntoConstraints = false
-    parent.addSubview(panel)
-
-    panel.layer.shadowColor = UIColor.black.cgColor
-    panel.layer.shadowRadius = 12
-    panel.layer.shadowOpacity = 0.2
-    panel.layer.shadowOffset = CGSize(width: 0, height: -2)
-
-    NSLayoutConstraint.activate([
-      panel.bottomAnchor.constraint(equalTo: parent.bottomAnchor),
-      panel.trailingAnchor.constraint(equalTo: parent.trailingAnchor),
-      panel.leadingAnchor.constraint(equalTo: parent.leadingAnchor),
-    ])
-
-    let pan = UIPanGestureRecognizer(target: self, action: #selector(onPanelPan(recognizer:)))
-    panel.addGestureRecognizer(pan)
-  }
-
-  private func initBackground() {
-    backgroundView.translatesAutoresizingMaskIntoConstraints = false
-    backgroundView.roundCorners(corners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], radius: cornerRadius)
-    backgroundView.clipsToBounds = true
-    panel.addSubview(backgroundView)
-    backgroundView.bindFrameToSuperviewBounds()
-  }
-
-  private func initContainer(on parent: UIView) {
-    container.translatesAutoresizingMaskIntoConstraints = false
-    backgroundView.addSubview(container)
-    containerHeight = container.heightAnchor.constraint(equalToConstant: collapsedHeight)
-    containerHeight.priority = .defaultHigh
-    NSLayoutConstraint.activate([
-      panel.topAnchor.constraint(greaterThanOrEqualTo: parent.topAnchor),
-      container.bottomAnchor.constraint(equalTo: parent.safeAreaLayoutGuide.bottomAnchor),
-      container.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor),
-      container.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor),
-      container.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: handleSpaceHeight),
-      containerHeight,
-    ])
-  }
-
-  private func initWindow() -> UIWindow {
-    let window = TouchThroughWindow(frame: UIScreen.main.bounds)
-    window.rootViewController = TouchThroughViewController()
-    window.windowLevel = .normal
-    window.backgroundColor = .clear
-    window.isHidden = true
-    return window
-  }
-
-  private func initActionContainer() {
-    actionContainer.translatesAutoresizingMaskIntoConstraints = false
-    actionContainer.axis = .horizontal
-    actionContainer.spacing = 12
-    panel.addSubview(actionContainer)
-    NSLayoutConstraint.activate([
-      panel.topAnchor.constraint(equalTo: actionContainer.topAnchor, constant: 16),
-      panel.trailingAnchor.constraint(equalTo: actionContainer.trailingAnchor, constant: 32)
-    ])
-  }
-
-  private func initHandle() {
-    handle.translatesAutoresizingMaskIntoConstraints = false
-    handle.backgroundColor = .lightGray
-    handle.alpha = isExpandable ? handleMaxOpacity : 0
-    handle.clipsToBounds = true
-    handle.layer.cornerRadius = 3
-    panel.addSubview(handle)
-    NSLayoutConstraint.activate([
-      handle.centerXAnchor.constraint(equalTo: panel.centerXAnchor),
-      handle.topAnchor.constraint(equalTo: panel.topAnchor, constant: 12),
-      handle.widthAnchor.constraint(equalToConstant: 36),
-      handle.heightAnchor.constraint(equalToConstant: 6)
-    ])
-  }
-
-  private func add(_ content: UIViewController, to surface: Surface) {
-    switch surface {
-    case .window:
-      parentViewController = window?.rootViewController
-    case .viewController(let viewController):
-      parentViewController = viewController
-    }
-    contentViewController = content
-    parentViewController?.add(content, to: container)
-  }
-}
-

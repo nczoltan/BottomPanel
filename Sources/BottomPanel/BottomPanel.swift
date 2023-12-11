@@ -312,7 +312,7 @@ extension BottomPanel {
     if heightInterpolation.progress == 1 && movement > 0 {
       return true
     }
-    if heightInterpolation.progress == 0 && movement < 0 {
+    if (heightInterpolation.progress == 0 && movement < 0) || isClosing {
       if config.closingByGesture {
         controlCloseInterpolation(by: movement)
         return false
@@ -369,7 +369,6 @@ extension BottomPanel {
     let normalizedProgress = min(max(progress, 0), 1)
 
     heightInterpolation.progress = normalizedProgress
-
     if normalizedProgress == 0 {
       currentPanelPosition = .collapsed
     } else if normalizedProgress == 1 {

@@ -71,7 +71,6 @@ extension BottomPanel {
     containerHeight = container.heightAnchor.constraint(equalToConstant: collapsedHeight)
     containerHeight.priority = .defaultHigh
     NSLayoutConstraint.activate([
-      panel.topAnchor.constraint(greaterThanOrEqualTo: parent.topAnchor),
       container.bottomAnchor.constraint(equalTo: parent.bottomAnchor),
       container.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor),
       container.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor),

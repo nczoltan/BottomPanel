@@ -27,12 +27,14 @@ public class BottomPanel {
   let expandingVelocity: CGFloat = 1
 
   var collapsedHeight: CGFloat { config.collapsedHeight - handleSpaceHeight }
-  var expandedHeight: CGFloat = CGFloat(UIScreen.main.bounds.height)
+  var expandedHeight: CGFloat {
+    CGFloat(UIScreen.main.bounds.height) + handleSpaceHeight
+  }
   var isClosing: Bool { closeInterpolation.progress != 0 }
 
   var config: BottomPanel.Config = Config() {
     didSet {
-      handle.alpha = config.isExpandable || config.closingByGesture ? 1 : 0
+      handle.alpha = config.isExpandable || config.closingByGesture ? handleMaxOpacity : 0
     }
   }
   internal (set) public var currentPanelPosition: PanelPosition = .collapsed {
@@ -116,7 +118,7 @@ public class BottomPanel {
     if collapsedHeight != containerHeight.constant {
       let transition = Interpolate(
         values: [containerHeight.constant, collapsedHeight],
-        function: BasicInterpolation.easeInOut,
+        function: BasicInterpolation.linear,
         apply: { [weak self] (constant: CGFloat) in
           self?.containerHeight.constant = constant
           self?.adjustCornerRadius()
@@ -138,6 +140,7 @@ public class BottomPanel {
       button.layer.shadowOpacity = 0.2
       button.layer.shadowOffset = CGSize(width: 0, height: -2)
     }
+    actionContainer.alpha = 1
   }
 
   public func observeScrollView(_ scrollView: UIScrollView) {
@@ -211,7 +214,7 @@ public class BottomPanel {
 
   private lazy var actionOpacityInterpolation = Interpolate(
     values: [1, 0],
-    function: BasicInterpolation.easeInOut,
+    function: BasicInterpolation.linear,
     apply: { [weak self] opacity in
       self?.actionContainer.alpha = opacity
     }
@@ -219,7 +222,7 @@ public class BottomPanel {
 
   private lazy var handleOpacityInterpolation = Interpolate(
     values: [handleMaxOpacity, 0],
-    function: BasicInterpolation.easeInOut,
+    function: BasicInterpolation.linear,
     apply: { [weak self] opacity in
       self?.handle.alpha = opacity
     }
@@ -232,7 +235,7 @@ public class BottomPanel {
   private func createCloseInterpolation() -> Interpolate {
     Interpolate(
       values: [0, panel.bounds.height],
-      function: BasicInterpolation.easeInOut,
+      function: BasicInterpolation.linear,
       apply: { [weak self] (translation: CGFloat) in
         self?.adjustActionOpacity()
         self?.adjustDimmingViewAlpha()
@@ -248,7 +251,7 @@ public class BottomPanel {
   private func createHeightInterpolation() -> Interpolate {
     Interpolate(
       values: [collapsedHeight, expandedHeight],
-      function: BasicInterpolation.easeInOut,
+      function: BasicInterpolation.linear,
       apply: { [weak self] (constant: CGFloat) in
         self?.containerHeight.constant = constant
         self?.adjustCornerRadius()
@@ -282,7 +285,7 @@ extension BottomPanel: ScrollerDelegate {
   }
 
   func scrollerDidScroll(movement: CGFloat) -> Bool {
-    adjustPanelPosition(by: movement)
+    return adjustPanelPosition(by: movement)
   }
 }
 
@@ -300,7 +303,7 @@ extension BottomPanel {
       let velocityPoint = CGPoint(x: 0, y: (-velocity.y / 1000))
       if isClosing {
         closingWillEndDragging(velocity: velocityPoint)
-      } else {
+      } else if config.isExpandable {
         draggingPanelWillEnd(velocity: velocityPoint)
       }
     default:

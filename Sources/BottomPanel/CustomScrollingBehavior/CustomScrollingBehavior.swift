@@ -14,18 +14,13 @@ protocol ScrollerDelegate: AnyObject {
   func didEndDragging()
   func scrollerWillEndDragging(velocity: CGPoint)
   func scrollerDidScroll(movement: CGFloat) -> Bool
+  func contentOffsetDidChange(_ offset: CGPoint)
 }
 
 class CustomScrollingBehavior: NSObject {
 
   weak var scrollerDelegate: ScrollerDelegate?
-  var isDamping = false {
-    didSet {
-      if isDamping != oldValue {
-        isDragging = false
-      }
-    }
-  }
+  var isDamping = false
   private var isCustomBehaviorActivated = false
   private var isDragging = false
   private var scrollViewOffset = CGPoint.zero
@@ -91,6 +86,7 @@ extension CustomScrollingBehavior: UIScrollViewDelegate {
       scrollView.contentOffset = scrollViewOffset
     } else {
       scrollViewOffset = scrollView.contentOffset
+      scrollerDelegate?.contentOffsetDidChange(scrollViewOffset)
     }
   }
 }

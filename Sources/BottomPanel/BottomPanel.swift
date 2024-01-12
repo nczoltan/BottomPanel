@@ -26,7 +26,16 @@ public class BottomPanel {
   let handleSpaceHeight: CGFloat = 20
   let expandingVelocity: CGFloat = 1
 
-  var collapsedHeight: CGFloat { config.collapsedHeight - handleSpaceHeight }
+  public var onPanelPositionChange: ((PanelPosition) -> Void)?
+
+  var collapsedHeight: CGFloat {
+    var height = config.collapsedHeight
+    if let safeAreaInsets = backgroundView.window?.safeAreaInsets {
+      height += safeAreaInsets.bottom
+    }
+    return height
+  }
+  
   var expandedHeight: CGFloat {
     var height = CGFloat(UIScreen.main.bounds.height) - handleSpaceHeight
     if let safeAreaInsets = backgroundView.window?.safeAreaInsets {
@@ -35,6 +44,7 @@ public class BottomPanel {
     return height
   }
   var isClosing: Bool { closeInterpolation.progress != 0 }
+  var isHandleVisible: Bool = true
 
   var config: BottomPanel.Config = Config() {
     didSet {
@@ -47,9 +57,11 @@ public class BottomPanel {
       case .collapsed:
         dimmingView.alpha = config.backgroundDimmingOnCollapsedState ? 1 : 0
         scrollObservation?.isDamping = config.isExpandable
+        onPanelPositionChange?(dimmingView.alpha == 1 ? .expanded : .collapsed)
       case .expanded:
         dimmingView.alpha = 1
         scrollObservation?.isDamping = false
+        onPanelPositionChange?(currentPanelPosition)
       }
     }
   }
@@ -131,6 +143,8 @@ public class BottomPanel {
       )
       transition.animate(1, duration: animationDuration)
     }
+    handle.alpha = config.isExpandable || config.closingByGesture ? handleMaxOpacity : 0
+    isHandleVisible = handle.alpha != 0
   }
 
   public func setAction(_ button: UIButton?) {
@@ -185,10 +199,6 @@ public class BottomPanel {
     }
   }
 
-  private func adjusthandleOpacity() {
-    handleOpacityInterpolation.progress = heightInterpolation.progress
-  }
-
   // MARK: Interpolations
   private lazy var handleOpacityInterpolation = Interpolate(
     values: [handleMaxOpacity, 0],
@@ -224,7 +234,6 @@ public class BottomPanel {
       apply: { [weak self] (constant: CGFloat) in
         self?.containerHeight.constant = constant
         self?.adjustDimmingViewAlpha()
-        // self?.adjusthandleOpacity()
         if self?.heightInterpolation.progress == 0 {
           self?.currentPanelPosition = .collapsed
         } else if self?.heightInterpolation.progress == 1 {
@@ -253,6 +262,14 @@ extension BottomPanel: ScrollerDelegate {
 
   func scrollerDidScroll(movement: CGFloat) -> Bool {
     return adjustPanelPosition(by: movement)
+  }
+
+  func contentOffsetDidChange(_ offset: CGPoint) {
+    let handleShouldBeVisible = offset.y < 8
+    guard handleShouldBeVisible != isHandleVisible else { return }
+    isHandleVisible = handleShouldBeVisible
+    handleOpacityInterpolation.stopAnimation()
+    handleOpacityInterpolation.animate(handleShouldBeVisible ? 0 : 1, duration: animationDuration)
   }
 }
 

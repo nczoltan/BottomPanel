@@ -74,7 +74,7 @@ extension BottomPanel {
       container.bottomAnchor.constraint(equalTo: parent.bottomAnchor),
       container.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor),
       container.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor),
-      container.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: handleSpaceHeight),
+      container.topAnchor.constraint(equalTo: backgroundView.topAnchor),
       containerHeight,
     ])
   }
@@ -103,6 +103,7 @@ extension BottomPanel {
     handle.translatesAutoresizingMaskIntoConstraints = false
     handle.backgroundColor = .lightGray
     handle.alpha = config.isExpandable || config.closingByGesture ? handleMaxOpacity : 0
+    isHandleVisible = handle.alpha != 0
     handle.clipsToBounds = true
     handle.layer.cornerRadius = 3
     panel.addSubview(handle)

@@ -28,7 +28,11 @@ public class BottomPanel {
 
   var collapsedHeight: CGFloat { config.collapsedHeight - handleSpaceHeight }
   var expandedHeight: CGFloat {
-    CGFloat(UIScreen.main.bounds.height) + handleSpaceHeight
+    var height = CGFloat(UIScreen.main.bounds.height) - handleSpaceHeight
+    if let safeAreaInsets = backgroundView.window?.safeAreaInsets {
+      height -= safeAreaInsets.top
+    }
+    return height
   }
   var isClosing: Bool { closeInterpolation.progress != 0 }
 
@@ -121,7 +125,6 @@ public class BottomPanel {
         function: BasicInterpolation.linear,
         apply: { [weak self] (constant: CGFloat) in
           self?.containerHeight.constant = constant
-          self?.adjustCornerRadius()
           self?.adjustDimmingViewAlpha()
           self?.panel.updateConstraints()
         }
@@ -172,16 +175,6 @@ public class BottomPanel {
   }
 
   // MARK: Adjusting interpolator's progress
-
-  private func adjustCornerRadius() {
-    let currentHeightProgress = heightInterpolation.progress
-    if currentHeightProgress <= 0.75 {
-      cornerRadiuisInterpolation.progress = 0
-    } else {
-      cornerRadiuisInterpolation.progress = (currentHeightProgress - 0.75) * 4
-    }
-  }
-
   private func adjustDimmingViewAlpha() {
     if isClosing && config.backgroundDimmingOnCollapsedState {
       let currentCloseProgress = closeInterpolation.progress
@@ -192,34 +185,11 @@ public class BottomPanel {
     }
   }
 
-  private func adjustActionOpacity() {
-    if isClosing {
-      actionOpacityInterpolation.progress = closeInterpolation.progress
-    } else {
-      actionOpacityInterpolation.progress = heightInterpolation.progress
-    }
-  }
-
   private func adjusthandleOpacity() {
     handleOpacityInterpolation.progress = heightInterpolation.progress
   }
 
   // MARK: Interpolations
-  private lazy var cornerRadiuisInterpolation = Interpolate(
-    values: [cornerRadius, 0],
-    apply: { [weak self] cornerRadius in
-      self?.backgroundView.roundCorners(corners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], radius: cornerRadius)
-    }
-  )
-
-  private lazy var actionOpacityInterpolation = Interpolate(
-    values: [1, 0],
-    function: BasicInterpolation.linear,
-    apply: { [weak self] opacity in
-      self?.actionContainer.alpha = opacity
-    }
-  )
-
   private lazy var handleOpacityInterpolation = Interpolate(
     values: [handleMaxOpacity, 0],
     function: BasicInterpolation.linear,
@@ -237,7 +207,6 @@ public class BottomPanel {
       values: [0, panel.bounds.height],
       function: BasicInterpolation.linear,
       apply: { [weak self] (translation: CGFloat) in
-        self?.adjustActionOpacity()
         self?.adjustDimmingViewAlpha()
         self?.panel.transform = CGAffineTransform(translationX: 0, y: translation)
       }
@@ -254,10 +223,8 @@ public class BottomPanel {
       function: BasicInterpolation.linear,
       apply: { [weak self] (constant: CGFloat) in
         self?.containerHeight.constant = constant
-        self?.adjustCornerRadius()
         self?.adjustDimmingViewAlpha()
-        self?.adjustActionOpacity()
-        self?.adjusthandleOpacity()
+        // self?.adjusthandleOpacity()
         if self?.heightInterpolation.progress == 0 {
           self?.currentPanelPosition = .collapsed
         } else if self?.heightInterpolation.progress == 1 {

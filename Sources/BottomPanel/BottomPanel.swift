@@ -25,6 +25,7 @@ public class BottomPanel {
   let handleMaxOpacity: CGFloat = 0.5
   let handleSpaceHeight: CGFloat = 20
   let expandingVelocity: CGFloat = 1
+  var scrollerOffset: CGPoint = .zero
 
   public var onPanelPositionChange: ((PanelPosition) -> Void)?
 
@@ -110,6 +111,7 @@ public class BottomPanel {
     if let scrollStateObservable = content as? ScrollStateObservable {
       observeScrollView(scrollStateObservable.observedScrollView)
     }
+    scrollerOffset = .zero
   }
 
   public func replace(
@@ -145,6 +147,7 @@ public class BottomPanel {
     }
     handle.alpha = config.isExpandable || config.closingByGesture ? handleMaxOpacity : 0
     isHandleVisible = handle.alpha != 0
+    scrollerOffset = .zero
   }
 
   public func setAction(_ button: UIButton?) {
@@ -265,6 +268,7 @@ extension BottomPanel: ScrollerDelegate {
   }
 
   func contentOffsetDidChange(_ offset: CGPoint) {
+    scrollerOffset = offset
     let handleShouldBeVisible = offset.y < 8
     guard handleShouldBeVisible != isHandleVisible else { return }
     isHandleVisible = handleShouldBeVisible
@@ -276,7 +280,7 @@ extension BottomPanel: ScrollerDelegate {
 // MARK: Pan gesture on panel
 extension BottomPanel {
   @objc func onPanelPan(recognizer: UIPanGestureRecognizer) {
-    guard config.isExpandable || config.closingByGesture else { return }
+    guard (config.isExpandable || config.closingByGesture) && (scrollerOffset == .zero) else { return }
     switch recognizer.state {
     case .changed:
       let movement = -recognizer.translation(in: recognizer.view).y

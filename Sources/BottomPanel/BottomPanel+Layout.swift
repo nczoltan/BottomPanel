@@ -55,6 +55,7 @@ extension BottomPanel {
 
     let pan = UIPanGestureRecognizer(target: self, action: #selector(onPanelPan(recognizer:)))
     panel.addGestureRecognizer(pan)
+    panelGestures = pan
   }
 
   func initBackground() {

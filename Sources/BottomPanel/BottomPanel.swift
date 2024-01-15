@@ -19,6 +19,7 @@ public class BottomPanel {
   var containerHeight: NSLayoutConstraint!
   weak var parentViewController: UIViewController?
   weak var contentViewController: UIViewController?
+  var panelGestures: UIPanGestureRecognizer?
 
   let animationDuration: CGFloat = 0.25
   let cornerRadius: CGFloat = 20
@@ -112,6 +113,7 @@ public class BottomPanel {
       observeScrollView(scrollStateObservable.observedScrollView)
     }
     scrollerOffset = .zero
+    panelGestures?.isEnabled = config.isExpandable || config.closingByGesture
   }
 
   public func replace(
@@ -148,6 +150,7 @@ public class BottomPanel {
     handle.alpha = config.isExpandable || config.closingByGesture ? handleMaxOpacity : 0
     isHandleVisible = handle.alpha != 0
     scrollerOffset = .zero
+    panelGestures?.isEnabled = config.isExpandable || config.closingByGesture
   }
 
   public func setAction(_ button: UIButton?) {

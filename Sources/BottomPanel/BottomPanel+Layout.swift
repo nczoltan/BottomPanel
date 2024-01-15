@@ -116,6 +116,43 @@ extension BottomPanel {
     ])
   }
 
+  func initCloseButton() {
+    var config = UIButton.Configuration.filled()
+    config.image = UIImage(systemName: "multiply")?.applyingSymbolConfiguration(.init(pointSize: 12))
+    config.cornerStyle = .capsule
+    config.contentInsets = .zero
+    config.baseBackgroundColor = UIColor(dynamicProvider: { traitCollection in
+      if traitCollection.userInterfaceStyle == .dark {
+        return .gray.withAlphaComponent(0.3)
+      } else {
+        return .gray.withAlphaComponent(0.2)
+      }
+    })
+    config.baseForegroundColor = UIColor(dynamicProvider: { traitCollection in
+      if traitCollection.userInterfaceStyle == .dark {
+        return .white
+      } else {
+        return .black
+      }
+    })
+
+    let button = UIButton(
+      configuration: config,
+      primaryAction: UIAction() { [weak self] _ in
+        self?.closeButtonDidPress?()
+      }
+    )
+    button.translatesAutoresizingMaskIntoConstraints = false
+
+    panel.addSubview(button)
+    NSLayoutConstraint.activate([
+      button.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 16),
+      button.topAnchor.constraint(equalTo: panel.topAnchor, constant: 16),
+      button.widthAnchor.constraint(equalToConstant: 28),
+      button.heightAnchor.constraint(equalToConstant: 28)
+    ])
+  }
+
   func add(_ content: UIViewController, to surface: Surface) {
     switch surface {
     case .window:

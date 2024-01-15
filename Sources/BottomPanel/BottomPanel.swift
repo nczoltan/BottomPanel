@@ -68,6 +68,7 @@ public class BottomPanel {
     }
   }
   public var onClosedWithGesture: (() -> Void)?
+  public var closeButtonDidPress: (() -> Void)?
 
   private var scrollObservation: CustomScrollingBehavior?
 
@@ -101,6 +102,7 @@ public class BottomPanel {
     initBackground()
     initContainer(on: parentView)
     initHandle()
+    initCloseButton()
     initActionContainer()
 
     // in case the surface is a winddow

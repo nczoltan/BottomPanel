@@ -94,6 +94,7 @@ extension BottomPanel {
     actionContainer.axis = .horizontal
     actionContainer.spacing = 12
     panel.addSubview(actionContainer)
+    panel.innerView = actionContainer
     NSLayoutConstraint.activate([
       panel.topAnchor.constraint(equalTo: actionContainer.topAnchor, constant: 16),
       panel.trailingAnchor.constraint(equalTo: actionContainer.trailingAnchor, constant: 32)
@@ -162,5 +163,32 @@ extension BottomPanel {
     }
     contentViewController = content
     parentViewController?.add(content, to: container)
+  }
+}
+
+class TouchExtendingView: UIView {
+  weak var innerView: UIView?
+
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("Not implemented")
+  }
+
+  override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    if let view = innerView, let v = view.hitTest(view.convert(point, from: self), with: event) {
+      return v
+    }
+    return super.hitTest(point, with: event)
+  }
+
+  override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+    if super.point(inside: point, with: event) { return true }
+    if let view = innerView {
+      return !view.isHidden && view.point(inside: view.convert(point, from: self), with: event)
+    }
+    return false
   }
 }

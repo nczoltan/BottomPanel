@@ -10,7 +10,7 @@ import UIKit
 
 public class BottomPanel {
   var window: UIWindow?
-  let panel = UIView()
+  let panel = TouchExtendingView()
   let actionContainer = UIStackView()
   let handle = UIView()
   let backgroundView = UIView()

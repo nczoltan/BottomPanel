@@ -119,7 +119,7 @@ extension BottomPanel {
 
   func initCloseButton() {
     var config = UIButton.Configuration.filled()
-    config.image = UIImage(systemName: "multiply")?.applyingSymbolConfiguration(.init(pointSize: 12))
+    config.image = UIImage(systemName: "arrow.left")?.applyingSymbolConfiguration(.init(pointSize: 12))
     config.cornerStyle = .capsule
     config.contentInsets = .zero
     config.baseBackgroundColor = UIColor(dynamicProvider: { traitCollection in

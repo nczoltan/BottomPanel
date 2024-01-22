@@ -150,6 +150,7 @@ public class BottomPanel {
       transition.animate(1, duration: animationDuration)
     }
     handle.alpha = config.isExpandable || config.closingByGesture ? handleMaxOpacity : 0
+    actionContainer.alpha = 1
     isHandleVisible = handle.alpha != 0
     scrollerOffset = .zero
     panelGestures?.isEnabled = config.isExpandable || config.closingByGesture
@@ -216,6 +217,14 @@ public class BottomPanel {
     }
   )
 
+  private lazy var actionContainerOpacityInterpolation = Interpolate(
+    values: [1, 0],
+    function: BasicInterpolation.linear,
+    apply: { [weak self] opacity in
+      self?.actionContainer.alpha = opacity
+    }
+  )
+
   private lazy var closeInterpolation: Interpolate = {
     createCloseInterpolation()
   }()
@@ -278,7 +287,9 @@ extension BottomPanel: ScrollerDelegate {
     guard handleShouldBeVisible != isHandleVisible else { return }
     isHandleVisible = handleShouldBeVisible
     handleOpacityInterpolation.stopAnimation()
+    actionContainerOpacityInterpolation.stopAnimation()
     handleOpacityInterpolation.animate(handleShouldBeVisible ? 0 : 1, duration: animationDuration)
+    actionContainerOpacityInterpolation.animate(handleShouldBeVisible ? 0 : 1, duration: animationDuration)
   }
 }
 

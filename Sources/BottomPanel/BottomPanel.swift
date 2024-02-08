@@ -126,6 +126,7 @@ public class BottomPanel {
     newContent.view.backgroundColor = backgroundColor
 
     guard let contentViewController else { return }
+    closeInterpolation.animate(0, duration: animationDuration)
     parentViewController?.replace(
       child: contentViewController,
       to: newContent,
@@ -192,8 +193,10 @@ public class BottomPanel {
     animated: Bool = true,
     completion: (() -> Void)? = nil
   ) {
-    closeInterpolation.animate(1, duration: animated ? animationDuration : 0) {
-      completion?()
+    closeInterpolation.animate(1, duration: animated ? animationDuration : 0) { [closeInterpolation] in
+      if closeInterpolation.progress == 1 {
+        completion?()
+      }
     }
   }
 
